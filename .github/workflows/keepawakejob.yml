@@ -1,0 +1,20 @@
+name: Scheduled Cron Job
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'  
+  workflow_dispatch: 
+
+jobs:
+  run-cronjob:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Run script
+      run: |
+        echo "Running scheduled task..."
+        
+        ./KeepAwake/keepawakejob.sh
