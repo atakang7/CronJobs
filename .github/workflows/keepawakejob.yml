@@ -16,5 +16,5 @@ jobs:
     - name: Run script
       run: |
         echo "Running scheduled task..."
-        
+        chmod +x ./KeepAwake/keepawakejob.sh
         ./KeepAwake/keepawakejob.sh
