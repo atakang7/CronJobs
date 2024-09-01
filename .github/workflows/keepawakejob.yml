@@ -2,7 +2,7 @@ name: Scheduled Cron Job
 
 on:
   schedule:
-    - cron: '*/10 * * * *'  
+    - cron: '*/1 * * * *'  
   workflow_dispatch: 
 
 jobs:
@@ -16,5 +16,5 @@ jobs:
     - name: Run script
       run: |
         echo "Running scheduled task..."
-        chmod +x ./KeepAwake/keepawakejob.sh
-        ./KeepAwake/keepawakejob.sh
+        chmod +x ./keepawakejob.sh
+        ./keepawakejob.sh
