@@ -2,24 +2,62 @@ name: Keep Projects Awake
 
 on:
   schedule:
-    - cron: '*/10 * * * *'  # Runs every 10 minutes
-  workflow_dispatch:  # Allows manual triggering
+    - cron: '*/15 * * * *'  
+  workflow_dispatch: 
 
 jobs:
   check_projects:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run project check script
+      - name: Get Runner IP Address
+        id: get_ip
         run: |
-          cat << 'EOF' > check_projects.sh
-          #!/bin/bash
+          # Fetch the IP address of the runner
+          IP_ADDRESS=$(curl -s ifconfig.me)
+          echo "Runner IP Address: $IP_ADDRESS"
+          echo "::set-output name=ip_address::$IP_ADDRESS"
+
+      - name: Fetch and Debug Existing IP Authorizations
+        id: fetch_auths
+        run: |
+          # Fetch the list of all IP authorizations
+          AUTHORIZATIONS=$(curl -s -H "Authorization: Token ${{ secrets.PROXY_API_TOKEN }}" "https://proxy.webshare.io/api/v2/proxy/ipauthorization/")
+          echo "Existing IP Authorizations: $AUTHORIZATIONS"
+          echo "$AUTHORIZATIONS" > auths.json
+
+      - name: Delete All Existing IP Authorizations
+        run: |
+          # Debug output
+          cat auths.json
+          
+          # Extract IDs and delete each authorization
+          for ID in $(jq -r '.results[] | .id' auths.json); do
+            echo "Deleting IP Authorization ID: $ID"
+            curl -X DELETE "https://proxy.webshare.io/api/v2/proxy/ipauthorization/$ID/" \
+                 -H "Authorization: Token ${{ secrets.PROXY_API_TOKEN }}"
+          done
+
+      - name: Authorize IP Address with Proxy API
+        run: |
+          # Send the IP address to the proxy API
+          IP_ADDRESS=${{ steps.get_ip.outputs.ip_address }}
+          echo "Authorizing IP Address: $IP_ADDRESS"
+          curl -X POST "https://proxy.webshare.io/api/v2/proxy/ipauthorization/" \
+               -H "Authorization: Token ${{ secrets.PROXY_API_TOKEN }}" \
+               -H "Content-Type: application/json" \
+               -d "{\"ip_address\": \"$IP_ADDRESS\"}"
+
+      - name: Create and Run Project Check Script
+        run: |
+          echo '#!/bin/bash
           proxies=(
               "38.154.227.167:5868" "45.127.248.127:5128" "64.64.118.149:6732"
               "167.160.180.203:6754" "166.88.58.10:5735" "173.0.9.70:5653"
-              "45.151.162.198:6600" "204.44.69.89:6342" "173.0.9.209:5792"
+              "204.44.69.89:6342" "173.0.9.209:5792"
               "206.41.172.74:6634"
           )
           projects=(
@@ -27,6 +65,7 @@ jobs:
               "https://noteapp001.onrender.com/"
               "https://satiscraper.onrender.com/"
               "https://smartpdf.onrender.com"
+              "https://chatverse-h1ch.onrender.com"
           )
           
           echo "Projects:"
@@ -92,8 +131,7 @@ jobs:
           else
               echo "At least one project was successfully accessed."
               exit 0
-          fi
-          EOF
+          fi' > check_projects.sh
           
           chmod +x check_projects.sh
           ./check_projects.sh
