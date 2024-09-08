@@ -66,6 +66,7 @@ jobs:
               "https://satiscraper.onrender.com/"
               "https://smartpdf.onrender.com"
               "https://chatverse-h1ch.onrender.com"
+              "https://projection-4wrw.onrender.com"
           )
           
           echo "Projects:"
