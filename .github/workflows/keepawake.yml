@@ -14,47 +14,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Get Runner IP Address
-        id: get_ip
-        run: |
-          IP_ADDRESS=$(curl -s ifconfig.me)
-          echo "Runner IP Address: $IP_ADDRESS"
-          echo "::set-output name=ip_address::$IP_ADDRESS"
-
-      - name: Fetch and Debug Existing IP Authorizations
-        id: fetch_auths
-        run: |
-          AUTHORIZATIONS=$(curl -s -H "Authorization: Token ${{ secrets.PROXY_API_TOKEN }}" "https://proxy.webshare.io/api/v2/proxy/ipauthorization/")
-          echo "Existing IP Authorizations: $AUTHORIZATIONS"
-          echo "$AUTHORIZATIONS" > auths.json
-
-      - name: Delete All Existing IP Authorizations
-        run: |
-          cat auths.json
-          for ID in $(jq -r '.results[] | .id' auths.json); do
-            echo "Deleting IP Authorization ID: $ID"
-            curl -X DELETE "https://proxy.webshare.io/api/v2/proxy/ipauthorization/$ID/" \
-                 -H "Authorization: Token ${{ secrets.PROXY_API_TOKEN }}"
-          done
-
-      - name: Authorize IP Address with Proxy API
-        run: |
-          IP_ADDRESS=${{ steps.get_ip.outputs.ip_address }}
-          echo "Authorizing IP Address: $IP_ADDRESS"
-          curl -X POST "https://proxy.webshare.io/api/v2/proxy/ipauthorization/" \
-               -H "Authorization: Token ${{ secrets.PROXY_API_TOKEN }}" \
-               -H "Content-Type: application/json" \
-               -d "{\"ip_address\": \"$IP_ADDRESS\"}"
-
       - name: Create and Run Project Check Script
         run: |
           echo '#!/bin/bash
-          proxies=(
-              "38.154.227.167:5868" "45.127.248.127:5128" "64.64.118.149:6732"
-              "167.160.180.203:6754" "166.88.58.10:5735" "173.0.9.70:5653"
-              "204.44.69.89:6342" "173.0.9.209:5792"
-              "206.41.172.74:6634"
-          )
           projects=(
               "https://blog-latest.onrender.com/login"
               "https://noteapp001.onrender.com/"
@@ -64,22 +26,15 @@ jobs:
               "https://projection-4wrw.onrender.com"
           )
           
-          echo "Projects:"
-          for project in "${projects[@]}"; do
-              echo "$project"
-          done
-          
-          timeout=60
-          interval=5
-          
           for project in "${projects[@]}"; do
               echo "Checking $project"
-              project_success=false
+              response=$(curl -s -o /dev/null -w "%{http_code}" "$project" --max-time 60)
               
-              for proxy in "${proxies[@]}"; do
-                  echo "Trying proxy: $proxy for $project"
-                  curl -s -m 60 -x "$proxy" "$project" || echo "Failed with proxy: $proxy"
-              done
+              if [ "$response" -eq 200 ]; then
+                  echo "Success: $project is up"
+              else
+                  echo "Failed: $project returned HTTP status $response"
+              fi
           done' > check_projects.sh
           
           chmod +x check_projects.sh
