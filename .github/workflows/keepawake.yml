@@ -16,7 +16,7 @@ jobs:
         run: |
           echo '#!/bin/bash
           projects=(
-              "https://bilgililerpaylasiyor.onrender.com/about"
+              "https://astro-latest.onrender.com"
               "https://newblog-z1jy.onrender.com"
               "https://noteapp001.onrender.com/"
               "https://satiscraper.onrender.com/"
